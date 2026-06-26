@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eddy Dashboard</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: sans-serif;
+            overflow: hidden; /* Impede barras de rolagem */
+        }
+        #relogio { font-size: 8rem; font-weight: bold; }
+        #temp { font-size: 2rem; color: #aaa; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div id="relogio">00:00</div>
+    <div id="temp">Carregando temperatura...</div>
+
+    <script>
+        function atualizar() {
+            const agora = new Date();
+            const horas = String(agora.getHours()).padStart(2, '0');
+            const minutos = String(agora.getMinutes()).padStart(2, '0');
+            document.getElementById('relogio').innerText = `${horas}:${minutos}`;
+        }
+        setInterval(atualizar, 1000);
+        atualizar();
+    </script>
+</body>
+</html>
