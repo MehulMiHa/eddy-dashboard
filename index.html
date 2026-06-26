@@ -19,23 +19,15 @@
         
         /* 1. Cortina de Apagão Elétrico */
         #blackout {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            background-color: #000;
-            z-index: 999999; 
-            display: none; 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #000; z-index: 999999; display: none; 
         }
 
-        /* 2. Sirene Visual de Cabo Desligado (Bordas Vermelhas) */
+        /* 2. Sirene Visual de Cabo Desligado (Apenas Bordas Vermelhas, sem som) */
         #alarm-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            box-shadow: inset 0 0 120px 30px #ff0000; 
-            z-index: 999998; 
-            pointer-events: none; 
-            display: none;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            box-shadow: inset 0 0 120px 30px #ff0000; z-index: 999998; 
+            pointer-events: none; display: none;
             animation: alertaPulsar 0.6s infinite alternate;
         }
         @keyframes alertaPulsar {
@@ -45,34 +37,22 @@
         
         /* Contentor da Rádio e Volume */
         #radio-container {
-            position: absolute;
-            top: 5vh; left: 3vw;
-            display: flex; flex-direction: column; align-items: center;
-            z-index: 10;
+            position: absolute; top: 5vh; left: 3vw; display: flex; flex-direction: column; align-items: center; z-index: 10;
         }
-
         #btn-radio {
-            background: rgba(255, 255, 255, 0.1);
-            color: #aaa;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 2vh 4vh; border-radius: 30px;
-            font-size: 3vh; font-weight: bold; cursor: pointer;
+            background: rgba(255, 255, 255, 0.1); color: #aaa; border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 2vh 4vh; border-radius: 30px; font-size: 3vh; font-weight: bold; cursor: pointer;
             backdrop-filter: blur(5px); transition: all 0.3s ease;
         }
         #btn-radio:active { background: rgba(255, 255, 255, 0.3); }
 
         /* Barra de Volume */
         #volume-container {
-            display: none; flex-direction: column; align-items: center;
-            margin-top: 2vh; background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.1); padding: 3vh 2vh;
-            border-radius: 40px; height: 35vh; backdrop-filter: blur(10px);
+            display: none; flex-direction: column; align-items: center; margin-top: 2vh; 
+            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); 
+            padding: 3vh 2vh; border-radius: 40px; height: 35vh; backdrop-filter: blur(10px);
         }
-        #volume-slider {
-            -webkit-appearance: slider-vertical; 
-            width: 5vh; height: 100%; margin: 2vh 0;
-            accent-color: #ff9f43; cursor: pointer;
-        }
+        #volume-slider { -webkit-appearance: slider-vertical; width: 5vh; height: 100%; margin: 2vh 0; accent-color: #ff9f43; cursor: pointer; }
         .vol-icon { font-size: 4vh; }
 
         /* Restante Interface */
@@ -89,9 +69,27 @@
         .box-in .temp-text { font-size: 16vh; font-weight: bold; }
         .box-out .label { color: #0abde3; font-size: 4vh; font-weight: bold; text-shadow: 0 0 15px rgba(10, 189, 227, 0.5); margin-bottom: -1vh; }
         .box-out .temp-text { font-size: 16vh; font-weight: bold; }
-        
         .out-temp-row { display: flex; align-items: center; justify-content: center; }
         #weather-icon { width: 15vh; height: 15vh; display: none; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+
+        /* ------------------------------------- */
+        /* NOVO: MODO ECRÃ INTEIRO DO EDDY       */
+        /* ------------------------------------- */
+        #eddy-fullscreen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #fff; /* Clarão Branco */
+            z-index: 9999999; /* Por cima de tudo */
+            display: none; /* Escondido por defeito */
+            justify-content: center; align-items: center;
+        }
+        
+        #eddy-face { transform: scale(3.5); } /* Rosto gigante ao centro */
+        .eddy-svg-black { fill: #000; } /* Rosto a Preto */
+        
+        #eddy-mouth {
+            transform-origin: center 130px; 
+            transition: transform 0.05s linear; /* Animação rápida para lip-sync */
+        }
     </style>
 </head>
 <body>
@@ -100,8 +98,6 @@
     <div id="alarm-overlay"></div>
 
     <audio id="audio-antena1" src="https://radiocast.rtp.pt/antena180a.mp3" preload="none"></audio>
-    <audio id="audio-alarme" src="https://actions.google.com/sounds/v1/alarms/spaceship_alarm.ogg" loop preload="auto"></audio>
-    
     <div id="radio-container">
         <button id="btn-radio" onclick="toggleRadio()">📻 Antena 1</button>
         <div id="volume-container">
@@ -122,13 +118,25 @@
             <span class="label">IN</span>
             <div class="temp-text"><span id="temp-in">--</span>°C</div>
         </div>
-
         <div class="box box-out">
             <span class="label">OUT</span>
             <div class="out-temp-row">
                 <img id="weather-icon" src="" alt="estado do tempo">
                 <div class="temp-text"><span id="temp-out">--</span>°C</div>
             </div>
+        </div>
+    </div>
+
+    <div id="eddy-fullscreen">
+        <div id="eddy-face">
+            <svg viewBox="0 0 200 280" width="30vh" height="42vh">
+                <path class="eddy-svg-black" d="M 20 120 v -20 a 70 70 0 0 1 140 0 v 30 h -30 v -30 a 40 40 0 0 0 -80 0 v 140 h 120 v 30 h -150 z" />
+                <rect class="eddy-svg-black" x="20" y="170" width="120" height="25" />
+                <path class="eddy-svg-black" d="M 45 110 A 18 18 0 0 1 81 110 Z" />
+                <path class="eddy-svg-black" d="M 100 110 A 18 18 0 0 1 136 110 Z" />
+                <path class="eddy-svg-black" id="eddy-mouth" d="M 55 130 A 32 30 0 0 0 125 130 Z" />
+                <polygon class="eddy-svg-black" points="60,195 85,235 85,260 105,260 105,235 130,195 110,195 95,215 80,195" />
+            </svg>
         </div>
     </div>
 
@@ -166,10 +174,8 @@
             audioRadio.volume = this.value;
         });
 
-        // 2. Sistema Cruzado de Energia e Bateria
+        // 2. Sistema Cruzado de Energia e Bateria (Sem Som)
         let eletricidadeLigada = true;
-        let alarmeA_Tocar = false;
-        const audioAlarme = document.getElementById('audio-alarme');
 
         function aplicarEstadosDeAlarme(estaACarregar) {
             const blackoutDiv = document.getElementById('blackout');
@@ -178,17 +184,14 @@
             if (!eletricidadeLigada) {
                 blackoutDiv.style.display = 'block';
                 alarmOverlay.style.display = 'none';
-                if (alarmeA_Tocar) { audioAlarme.pause(); alarmeA_Tocar = false; }
             } 
             else if (eletricidadeLigada && !estaACarregar) {
                 blackoutDiv.style.display = 'none';
                 alarmOverlay.style.display = 'block';
-                if (!alarmeA_Tocar) { audioAlarme.play(); alarmeA_Tocar = true; }
             } 
             else {
                 blackoutDiv.style.display = 'none';
                 alarmOverlay.style.display = 'none';
-                if (alarmeA_Tocar) { audioAlarme.pause(); audioAlarme.currentTime = 0; alarmeA_Tocar = false; }
             }
         }
 
@@ -265,6 +268,62 @@
             const eixoX = Math.floor(Math.random() * 13) - 6; 
             const eixoY = Math.floor(Math.random() * 13) - 6;
             document.body.style.transform = `translate(${eixoX}px, ${eixoY}px)`;
+        }
+
+        // -----------------------------------------------------
+        // INTELIGÊNCIA ARTIFICIAL: OUVIDOS E BOCA DO EDDY
+        // -----------------------------------------------------
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true; 
+            recognition.interimResults = true; 
+            recognition.lang = 'pt-PT';
+
+            recognition.onresult = function(event) {
+                let transcricao = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    transcricao += event.results[i][0].transcript;
+                }
+                
+                // Ativa se ouvir "Eddy" ou "Edi"
+                if (transcricao.toLowerCase().includes('eddy') || transcricao.toLowerCase().includes('edi')) {
+                    acordarEddy();
+                }
+            };
+
+            recognition.onend = function() { recognition.start(); };
+            recognition.start();
+        }
+
+        let lipSyncInterval;
+        const boca = document.getElementById('eddy-mouth');
+        const eddyScreen = document.getElementById('eddy-fullscreen');
+
+        function acordarEddy() {
+            eddyScreen.style.display = 'flex';
+            
+            const resposta = "Sim, grande criador? Achas mesmo que eu não tenho mais nada para fazer senão ouvir-te?";
+            const synth = window.speechSynthesis;
+            const utterThis = new SpeechSynthesisUtterance(resposta);
+            utterThis.lang = 'pt-PT';
+            utterThis.rate = 1.1; 
+
+            utterThis.onstart = function() {
+                // LIP-SYNC
+                lipSyncInterval = setInterval(() => {
+                    const abertura = 0.2 + Math.random(); 
+                    boca.style.transform = `scaleY(${abertura})`;
+                }, 50);
+            };
+
+            utterThis.onend = function() {
+                clearInterval(lipSyncInterval);
+                boca.style.transform = 'scaleY(1)'; 
+                setTimeout(() => { eddyScreen.style.display = 'none'; }, 2000);
+            };
+
+            synth.speak(utterThis);
         }
 
         // Iniciar tudo
