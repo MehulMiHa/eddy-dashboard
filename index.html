@@ -46,7 +46,7 @@
         /* Contentor da Rádio e Volume */
         #radio-container {
             position: absolute;
-            top: 30px; left: 30px;
+            top: 5vh; left: 3vw;
             display: flex; flex-direction: column; align-items: center;
             z-index: 10;
         }
@@ -55,8 +55,8 @@
             background: rgba(255, 255, 255, 0.1);
             color: #aaa;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 20px 35px; border-radius: 30px;
-            font-size: 1.8rem; font-weight: bold; cursor: pointer;
+            padding: 2vh 4vh; border-radius: 30px;
+            font-size: 3vh; font-weight: bold; cursor: pointer;
             backdrop-filter: blur(5px); transition: all 0.3s ease;
         }
         #btn-radio:active { background: rgba(255, 255, 255, 0.3); }
@@ -64,32 +64,34 @@
         /* Barra de Volume */
         #volume-container {
             display: none; flex-direction: column; align-items: center;
-            margin-top: 20px; background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.1); padding: 25px 15px;
-            border-radius: 40px; height: 350px; backdrop-filter: blur(10px);
+            margin-top: 2vh; background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1); padding: 3vh 2vh;
+            border-radius: 40px; height: 35vh; backdrop-filter: blur(10px);
         }
         #volume-slider {
             -webkit-appearance: slider-vertical; 
-            width: 40px; height: 100%; margin: 20px 0;
+            width: 5vh; height: 100%; margin: 2vh 0;
             accent-color: #ff9f43; cursor: pointer;
         }
-        .vol-icon { font-size: 2.5rem; }
+        .vol-icon { font-size: 4vh; }
 
         /* Restante Interface */
-        .header-container { text-align: center; margin-top: 40px; display: flex; flex-direction: column; align-items: center; }
-        #data-atual { font-size: 3.5rem; color: #b39ddb; text-transform: capitalize; margin-bottom: -30px; text-shadow: 0 0 15px rgba(179, 157, 219, 0.4); }
-        #relogio { font-size: 17rem; font-weight: 900; letter-spacing: -3px; text-shadow: 0 0 25px rgba(255, 255, 255, 0.3); margin: 0; }
+        .header-container { text-align: center; margin-top: 6vh; display: flex; flex-direction: column; align-items: center; }
+        #data-atual { font-size: 6vh; color: #b39ddb; text-transform: capitalize; margin-bottom: -3vh; text-shadow: 0 0 15px rgba(179, 157, 219, 0.4); }
+        #relogio { font-size: 33vh; font-weight: 900; letter-spacing: -3px; text-shadow: 0 0 25px rgba(255, 255, 255, 0.3); margin: 0; }
         .pisca { animation: piscar 1s step-start infinite; }
         @keyframes piscar { 50% { opacity: 0.2; } }
-        #chuva-hoje { font-size: 2.8rem; color: #48dbfb; font-weight: 600; text-shadow: 0 0 15px rgba(72, 219, 251, 0.4); margin-top: -15px; }
-        .container-temps { display: flex; justify-content: space-around; align-items: center; width: 100%; margin-top: auto; margin-bottom: 80px; }
+        #chuva-hoje { font-size: 5vh; color: #48dbfb; font-weight: 600; text-shadow: 0 0 15px rgba(72, 219, 251, 0.4); margin-top: -3vh; }
+        
+        .container-temps { display: flex; justify-content: space-around; align-items: center; width: 100%; margin-top: auto; margin-bottom: 8vh; }
         .box { text-align: center; display: flex; flex-direction: column; align-items: center; }
-        .box-in .label { color: #ff9f43; font-size: 2.8rem; font-weight: bold; text-shadow: 0 0 15px rgba(255, 159, 67, 0.5); margin-bottom: -10px; }
-        .box-in .temp-text { font-size: 8rem; font-weight: bold; }
-        .box-out .label { color: #0abde3; font-size: 2.8rem; font-weight: bold; text-shadow: 0 0 15px rgba(10, 189, 227, 0.5); margin-bottom: -10px; }
-        .box-out .temp-text { font-size: 8rem; font-weight: bold; }
+        .box-in .label { color: #ff9f43; font-size: 4vh; font-weight: bold; text-shadow: 0 0 15px rgba(255, 159, 67, 0.5); margin-bottom: -1vh; }
+        .box-in .temp-text { font-size: 16vh; font-weight: bold; }
+        .box-out .label { color: #0abde3; font-size: 4vh; font-weight: bold; text-shadow: 0 0 15px rgba(10, 189, 227, 0.5); margin-bottom: -1vh; }
+        .box-out .temp-text { font-size: 16vh; font-weight: bold; }
+        
         .out-temp-row { display: flex; align-items: center; justify-content: center; }
-        #weather-icon { width: 110px; height: 110px; display: none; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        #weather-icon { width: 15vh; height: 15vh; display: none; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
     </style>
 </head>
 <body>
@@ -164,50 +166,37 @@
             audioRadio.volume = this.value;
         });
 
-        // 2. Sistema Cruzado de Energia e Bateria (Com Gatilho Instantâneo)
+        // 2. Sistema Cruzado de Energia e Bateria
         let eletricidadeLigada = true;
         let alarmeA_Tocar = false;
         const audioAlarme = document.getElementById('audio-alarme');
 
-        // Esta função centraliza a decisão visual e sonora
         function aplicarEstadosDeAlarme(estaACarregar) {
             const blackoutDiv = document.getElementById('blackout');
             const alarmOverlay = document.getElementById('alarm-overlay');
 
             if (!eletricidadeLigada) {
-                // Apagão Geral: Cortina Preta e cala a boca à sirene
                 blackoutDiv.style.display = 'block';
                 alarmOverlay.style.display = 'none';
                 if (alarmeA_Tocar) { audioAlarme.pause(); alarmeA_Tocar = false; }
             } 
             else if (eletricidadeLigada && !estaACarregar) {
-                // Luz de casa ligada + Cabo desconectado = ALARME MÁXIMO!
                 blackoutDiv.style.display = 'none';
                 alarmOverlay.style.display = 'block';
-                if (!alarmeA_Tocar) { 
-                    audioAlarme.play(); 
-                    alarmeA_Tocar = true; 
-                }
+                if (!alarmeA_Tocar) { audioAlarme.play(); alarmeA_Tocar = true; }
             } 
             else {
-                // Tudo Perfeito: Tira as cortinas e cala a sirene
                 blackoutDiv.style.display = 'none';
                 alarmOverlay.style.display = 'none';
-                if (alarmeA_Tocar) { 
-                    audioAlarme.pause(); 
-                    audioAlarme.currentTime = 0; 
-                    alarmeA_Tocar = false; 
-                }
+                if (alarmeA_Tocar) { audioAlarme.pause(); audioAlarme.currentTime = 0; alarmeA_Tocar = false; }
             }
         }
 
-        // Monitoriza a Lâmpada a cada 5 segundos
         async function monitorarHueBridge() {
             try {
                 const url = `http://${HUE_IP}/api/${HUE_TOKEN}/lights/${ID_DA_LAMPADA}`;
                 const response = await fetch(url);
                 const data = await response.json();
-                
                 eletricidadeLigada = !(data.state && data.state.reachable === false);
             } catch (e) { 
                 eletricidadeLigada = false; 
@@ -218,7 +207,6 @@
             }
         }
 
-        // Gatilho INSTANTÂNEO para quando o cabo é puxado ou inserido
         if ('getBattery' in navigator) {
             navigator.getBattery().then(function(battery) {
                 battery.addEventListener('chargingchange', function() {
@@ -227,7 +215,7 @@
             });
         }
 
-        // 3. Meteorologia, Relógio e Burn-in (inalterados)
+        // 3. Meteorologia, Relógio e Burn-in
         function updateClockAndDate() {
             const agora = new Date();
             const horas = String(agora.getHours()).padStart(2, '0');
