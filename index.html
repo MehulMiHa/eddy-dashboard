@@ -6,56 +6,22 @@
     <title>Eddy Dashboard</title>
     <style>
         body { 
-            background-color: #000; 
-            color: #fff; 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            overflow: hidden; 
-            transition: transform 3s ease-in-out; 
+            background-color: #000; color: #fff; margin: 0; display: flex; flex-direction: column; 
+            height: 100vh; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            overflow: hidden; transition: transform 3s ease-in-out; 
         }
         
-        /* 1. Cortina de Apagão Elétrico */
-        #blackout {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: #000; z-index: 999999; display: none; 
-        }
-
-        /* 2. Sirene Visual de Cabo Desligado (Apenas Bordas Vermelhas, sem som) */
-        #alarm-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            box-shadow: inset 0 0 120px 30px #ff0000; z-index: 999998; 
-            pointer-events: none; display: none;
-            animation: alertaPulsar 0.6s infinite alternate;
-        }
-        @keyframes alertaPulsar {
-            from { opacity: 0.2; }
-            to { opacity: 1; }
-        }
+        #blackout { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #000; z-index: 999999; display: none; }
+        #alarm-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; box-shadow: inset 0 0 120px 30px #ff0000; z-index: 999998; pointer-events: none; display: none; animation: alertaPulsar 0.6s infinite alternate; }
+        @keyframes alertaPulsar { from { opacity: 0.2; } to { opacity: 1; } }
         
-        /* Contentor da Rádio e Volume */
-        #radio-container {
-            position: absolute; top: 5vh; left: 3vw; display: flex; flex-direction: column; align-items: center; z-index: 10;
-        }
-        #btn-radio {
-            background: rgba(255, 255, 255, 0.1); color: #aaa; border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 2vh 4vh; border-radius: 30px; font-size: 3vh; font-weight: bold; cursor: pointer;
-            backdrop-filter: blur(5px); transition: all 0.3s ease;
-        }
+        #radio-container { position: absolute; top: 5vh; left: 3vw; display: flex; flex-direction: column; align-items: center; z-index: 10; }
+        #btn-radio { background: rgba(255, 255, 255, 0.1); color: #aaa; border: 1px solid rgba(255, 255, 255, 0.2); padding: 2vh 4vh; border-radius: 30px; font-size: 3vh; font-weight: bold; cursor: pointer; backdrop-filter: blur(5px); transition: all 0.3s ease; }
         #btn-radio:active { background: rgba(255, 255, 255, 0.3); }
-
-        /* Barra de Volume */
-        #volume-container {
-            display: none; flex-direction: column; align-items: center; margin-top: 2vh; 
-            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); 
-            padding: 3vh 2vh; border-radius: 40px; height: 35vh; backdrop-filter: blur(10px);
-        }
+        #volume-container { display: none; flex-direction: column; align-items: center; margin-top: 2vh; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); padding: 3vh 2vh; border-radius: 40px; height: 35vh; backdrop-filter: blur(10px); }
         #volume-slider { -webkit-appearance: slider-vertical; width: 5vh; height: 100%; margin: 2vh 0; accent-color: #ff9f43; cursor: pointer; }
         .vol-icon { font-size: 4vh; }
 
-        /* Restante Interface */
         .header-container { text-align: center; margin-top: 6vh; display: flex; flex-direction: column; align-items: center; }
         #data-atual { font-size: 6vh; color: #b39ddb; text-transform: capitalize; margin-bottom: -3vh; text-shadow: 0 0 15px rgba(179, 157, 219, 0.4); }
         #relogio { font-size: 33vh; font-weight: 900; letter-spacing: -3px; text-shadow: 0 0 25px rgba(255, 255, 255, 0.3); margin: 0; }
@@ -73,22 +39,52 @@
         #weather-icon { width: 15vh; height: 15vh; display: none; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
 
         /* ------------------------------------- */
-        /* NOVO: MODO ECRÃ INTEIRO DO EDDY       */
+        /* MODO EDDY COM IMAGEM ORIGINAL         */
         /* ------------------------------------- */
         #eddy-fullscreen {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: #fff; /* Clarão Branco */
-            z-index: 9999999; /* Por cima de tudo */
-            display: none; /* Escondido por defeito */
-            justify-content: center; align-items: center;
+            z-index: 9999999; display: none; justify-content: center; align-items: center;
         }
         
-        #eddy-face { transform: scale(3.5); } /* Rosto gigante ao centro */
-        .eddy-svg-black { fill: #000; } /* Rosto a Preto */
+        #eddy-wrapper {
+            position: relative;
+            width: 50vh; /* Tamanho geral da imagem do Eddy */
+            height: 50vh;
+        }
         
-        #eddy-mouth {
-            transform-origin: center 130px; 
-            transition: transform 0.05s linear; /* Animação rápida para lip-sync */
+        #eddy-img {
+            width: 100%; height: 100%; object-fit: contain;
+        }
+
+        /* Máscaras Brancas para Animar os Olhos e Boca */
+        .mask { position: absolute; background-color: #fff; }
+
+        /* ATENÇÃO: Se a boca ou olhos não estiverem perfeitamente alinhados
+           com a TUA imagem, podes alterar os valores de "top" e "left" abaixo
+           para afinar a posição.
+        */
+
+        /* Pálpebras (Descem para piscar) */
+        #eyelid-left {
+            top: 25%; left: 36%; width: 10%; height: 10%;
+            transform: translateY(-100%); transition: transform 0.1s;
+        }
+        #eyelid-right {
+            top: 25%; left: 49%; width: 10%; height: 10%;
+            transform: translateY(-100%); transition: transform 0.1s;
+        }
+
+        /* Máscara da Boca (Sobe e desce para simular a fala sobrepondo o sorriso original) */
+        #mouth-mask {
+            top: 45%; left: 40%; width: 20%; height: 10%;
+            transform: translateY(100%); transition: transform 0.05s;
+        }
+
+        /* Indicador de Microfone Ativo */
+        #mic-status {
+            position: fixed; bottom: 2vh; right: 2vw; width: 1.5vh; height: 1.5vh; 
+            background-color: red; border-radius: 50%; opacity: 0.5; z-index: 9999;
         }
     </style>
 </head>
@@ -96,8 +92,10 @@
 
     <div id="blackout"></div>
     <div id="alarm-overlay"></div>
+    <div id="mic-status" title="Microfone a ouvir"></div>
 
     <audio id="audio-antena1" src="https://radiocast.rtp.pt/antena180a.mp3" preload="none"></audio>
+    
     <div id="radio-container">
         <button id="btn-radio" onclick="toggleRadio()">📻 Antena 1</button>
         <div id="volume-container">
@@ -128,25 +126,21 @@
     </div>
 
     <div id="eddy-fullscreen">
-        <div id="eddy-face">
-            <svg viewBox="0 0 200 280" width="30vh" height="42vh">
-                <path class="eddy-svg-black" d="M 20 120 v -20 a 70 70 0 0 1 140 0 v 30 h -30 v -30 a 40 40 0 0 0 -80 0 v 140 h 120 v 30 h -150 z" />
-                <rect class="eddy-svg-black" x="20" y="170" width="120" height="25" />
-                <path class="eddy-svg-black" d="M 45 110 A 18 18 0 0 1 81 110 Z" />
-                <path class="eddy-svg-black" d="M 100 110 A 18 18 0 0 1 136 110 Z" />
-                <path class="eddy-svg-black" id="eddy-mouth" d="M 55 130 A 32 30 0 0 0 125 130 Z" />
-                <polygon class="eddy-svg-black" points="60,195 85,235 85,260 105,260 105,235 130,195 110,195 95,215 80,195" />
-            </svg>
+        <div id="eddy-wrapper">
+            <img id="eddy-img" src="eddy.png" alt="Eddy">
+            
+            <div id="eyelid-left" class="mask"></div>
+            <div id="eyelid-right" class="mask"></div>
+            <div id="mouth-mask" class="mask"></div>
         </div>
     </div>
 
     <script>
-        // CONFIGURAÇÕES
         const HUE_IP = '192.168.1.183';
         const HUE_TOKEN = 'ryqpfV2hzUw3ZkN-twiFBEMPUu-cN7CxHMFDaVSa';
         const ID_DA_LAMPADA = 16; 
 
-        // 1. Controlo da Rádio e Volume
+        // Rádio e Volume
         const audioRadio = document.getElementById('audio-antena1');
         const btnRadio = document.getElementById('btn-radio');
         const volContainer = document.getElementById('volume-container');
@@ -169,56 +163,37 @@
                 volContainer.style.display = 'none'; 
             }
         }
+        volumeSlider.addEventListener('input', function() { audioRadio.volume = this.value; });
 
-        volumeSlider.addEventListener('input', function() {
-            audioRadio.volume = this.value;
-        });
-
-        // 2. Sistema Cruzado de Energia e Bateria (Sem Som)
+        // Alarme Energia
         let eletricidadeLigada = true;
-
         function aplicarEstadosDeAlarme(estaACarregar) {
             const blackoutDiv = document.getElementById('blackout');
             const alarmOverlay = document.getElementById('alarm-overlay');
-
             if (!eletricidadeLigada) {
-                blackoutDiv.style.display = 'block';
-                alarmOverlay.style.display = 'none';
-            } 
-            else if (eletricidadeLigada && !estaACarregar) {
-                blackoutDiv.style.display = 'none';
-                alarmOverlay.style.display = 'block';
-            } 
-            else {
-                blackoutDiv.style.display = 'none';
-                alarmOverlay.style.display = 'none';
+                blackoutDiv.style.display = 'block'; alarmOverlay.style.display = 'none';
+            } else if (eletricidadeLigada && !estaACarregar) {
+                blackoutDiv.style.display = 'none'; alarmOverlay.style.display = 'block';
+            } else {
+                blackoutDiv.style.display = 'none'; alarmOverlay.style.display = 'none';
             }
         }
-
         async function monitorarHueBridge() {
             try {
                 const url = `http://${HUE_IP}/api/${HUE_TOKEN}/lights/${ID_DA_LAMPADA}`;
                 const response = await fetch(url);
                 const data = await response.json();
                 eletricidadeLigada = !(data.state && data.state.reachable === false);
-            } catch (e) { 
-                eletricidadeLigada = false; 
-            }
-
-            if ('getBattery' in navigator) {
-                navigator.getBattery().then(b => aplicarEstadosDeAlarme(b.charging));
-            }
+            } catch (e) { eletricidadeLigada = false; }
+            if ('getBattery' in navigator) navigator.getBattery().then(b => aplicarEstadosDeAlarme(b.charging));
         }
-
         if ('getBattery' in navigator) {
             navigator.getBattery().then(function(battery) {
-                battery.addEventListener('chargingchange', function() {
-                    aplicarEstadosDeAlarme(battery.charging);
-                });
+                battery.addEventListener('chargingchange', function() { aplicarEstadosDeAlarme(battery.charging); });
             });
         }
 
-        // 3. Meteorologia, Relógio e Burn-in
+        // Relógio, Clima e Anti Burn-in
         function updateClockAndDate() {
             const agora = new Date();
             const horas = String(agora.getHours()).padStart(2, '0');
@@ -227,7 +202,6 @@
             const opcoesData = { weekday: 'long', day: 'numeric', month: 'long' };
             document.getElementById('data-atual').innerText = agora.toLocaleDateString('pt-PT', opcoesData);
         }
-
         async function getOutdoorTemp() {
             try {
                 const url = `https://api.openweathermap.org/data/2.5/weather?q=Santo+Antonio+dos+Cavaleiros,PT&appid=8a3fe8fecca47dfc4859d6c3ef1a0214&units=metric&lang=pt`;
@@ -240,7 +214,6 @@
                 iconElement.style.display = 'block'; 
             } catch (e) { document.getElementById('temp-out').innerText = "Err"; }
         }
-
         async function getRainChance() {
             try {
                 const url = `https://api.openweathermap.org/data/2.5/forecast?q=Santo+Antonio+dos+Cavaleiros,PT&appid=8a3fe8fecca47dfc4859d6c3ef1a0214&units=metric&lang=pt`;
@@ -254,7 +227,6 @@
                 document.getElementById('chuva-hoje').innerText = `🌧️ Chuva hoje: ${chance}%`;
             } catch (e) { document.getElementById('chuva-hoje').innerText = `🌧️ Chuva hoje: Err`; }
         }
-
         async function getIndoorTemp() {
             try {
                 const url = `http://${HUE_IP}/api/${HUE_TOKEN}/sensors/34`;
@@ -263,22 +235,25 @@
                 document.getElementById('temp-in').innerText = Math.round(data.state.temperature / 100);
             } catch (e) { document.getElementById('temp-in').innerText = "Err"; }
         }
-
         function aplicarAntiBurnIn() {
-            const eixoX = Math.floor(Math.random() * 13) - 6; 
-            const eixoY = Math.floor(Math.random() * 13) - 6;
+            const eixoX = Math.floor(Math.random() * 13) - 6; const eixoY = Math.floor(Math.random() * 13) - 6;
             document.body.style.transform = `translate(${eixoX}px, ${eixoY}px)`;
         }
 
         // -----------------------------------------------------
-        // INTELIGÊNCIA ARTIFICIAL: OUVIDOS E BOCA DO EDDY
+        // INTELIGÊNCIA ARTIFICIAL: OUVIDOS SUPER-SENSÍVEIS E BOCA DO EDDY
         // -----------------------------------------------------
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const micStatus = document.getElementById('mic-status');
+
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
             recognition.continuous = true; 
             recognition.interimResults = true; 
             recognition.lang = 'pt-PT';
+
+            recognition.onstart = function() { micStatus.style.backgroundColor = 'red'; };
+            recognition.onerror = function() { micStatus.style.backgroundColor = 'gray'; };
 
             recognition.onresult = function(event) {
                 let transcricao = '';
@@ -286,19 +261,37 @@
                     transcricao += event.results[i][0].transcript;
                 }
                 
-                // Ativa se ouvir "Eddy" ou "Edi"
-                if (transcricao.toLowerCase().includes('eddy') || transcricao.toLowerCase().includes('edi')) {
+                // Dicionário Fonético Amplo (Apanha todos os erros de audição do Android)
+                const frases = transcricao.toLowerCase();
+                if (frases.match(/(eddy|edi|eddie|edy|ady|é de|é di|adi|teddy|hedy)/)) {
                     acordarEddy();
                 }
             };
 
-            recognition.onend = function() { recognition.start(); };
+            recognition.onend = function() { 
+                micStatus.style.backgroundColor = 'gray';
+                recognition.start(); // Reinicia sempre que cair
+            };
             recognition.start();
         }
 
         let lipSyncInterval;
-        const boca = document.getElementById('eddy-mouth');
+        const bocaMascara = document.getElementById('mouth-mask');
+        const olhoEsq = document.getElementById('eyelid-left');
+        const olhoDir = document.getElementById('eyelid-right');
         const eddyScreen = document.getElementById('eddy-fullscreen');
+
+        // Piscar os olhos aleatoriamente quando o Eddy está no ecrã
+        setInterval(() => {
+            if(eddyScreen.style.display === 'flex') {
+                olhoEsq.style.transform = 'translateY(0)'; // Desce a pálpebra branca
+                olhoDir.style.transform = 'translateY(0)';
+                setTimeout(() => {
+                    olhoEsq.style.transform = 'translateY(-100%)'; // Sobe a pálpebra
+                    olhoDir.style.transform = 'translateY(-100%)';
+                }, 150);
+            }
+        }, 4000);
 
         function acordarEddy() {
             eddyScreen.style.display = 'flex';
@@ -310,16 +303,17 @@
             utterThis.rate = 1.1; 
 
             utterThis.onstart = function() {
-                // LIP-SYNC
+                // LIP-SYNC COM A MÁSCARA (A máscara branca sobe e desce tapando a boca original)
                 lipSyncInterval = setInterval(() => {
-                    const abertura = 0.2 + Math.random(); 
-                    boca.style.transform = `scaleY(${abertura})`;
-                }, 50);
+                    // Valor aleatório entre 0 e 100% para tapar a boca
+                    const tapar = Math.random() * 100; 
+                    bocaMascara.style.transform = `translateY(${tapar}%)`;
+                }, 60);
             };
 
             utterThis.onend = function() {
                 clearInterval(lipSyncInterval);
-                boca.style.transform = 'scaleY(1)'; 
+                bocaMascara.style.transform = 'translateY(100%)'; // Destapa a boca sorridente no fim
                 setTimeout(() => { eddyScreen.style.display = 'none'; }, 2000);
             };
 
