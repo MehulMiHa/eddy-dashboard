@@ -5,35 +5,96 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eddy Dashboard</title>
     <style>
-        body {
-            background-color: #000;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: sans-serif;
-            overflow: hidden; /* Impede barras de rolagem */
+        body { 
+            background-color: #000; 
+            color: #fff; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            font-family: sans-serif; 
+            overflow: hidden; 
         }
-        #relogio { font-size: 8rem; font-weight: bold; }
-        #temp { font-size: 2rem; color: #aaa; margin-top: 20px; }
+        #relogio { 
+            font-size: 10rem; 
+            text-align: center; 
+            margin-top: 40px; 
+            font-weight: bold; 
+        }
+        .container-temps { 
+            display: flex; 
+            justify-content: space-around; 
+            width: 100%; 
+            margin-top: auto; 
+            margin-bottom: 60px; 
+        }
+        .box { 
+            text-align: center; 
+            font-size: 5rem; 
+        }
+        .label { 
+            font-size: 2rem; 
+            color: #aaa; 
+            display: block; 
+            text-transform: uppercase; 
+        }
     </style>
 </head>
 <body>
+
     <div id="relogio">00:00</div>
-    <div id="temp">Carregando temperatura...</div>
+    
+    <div class="container-temps">
+        <div class="box">
+            <span class="label">IN</span>
+            <span id="temp-in">--</span>°C
+        </div>
+        <div class="box">
+            <span class="label">OUT</span>
+            <span id="temp-out">--</span>°C
+        </div>
+    </div>
 
     <script>
-        function atualizar() {
+        function updateClock() {
             const agora = new Date();
             const horas = String(agora.getHours()).padStart(2, '0');
             const minutos = String(agora.getMinutes()).padStart(2, '0');
             document.getElementById('relogio').innerText = `${horas}:${minutos}`;
         }
-        setInterval(atualizar, 1000);
-        atualizar();
+
+        // Temperatura Exterior
+        async function getOutdoorTemp() {
+            try {
+                const url = `https://api.openweathermap.org/data/2.5/weather?q=Santo+Antonio+dos+Cavaleiros,PT&appid=8a3fe8fecca47dfc4859d6c3ef1a0214&units=metric`;
+                const response = await fetch(url);
+                const data = await response.json();
+                document.getElementById('temp-out').innerText = Math.round(data.main.temp);
+            } catch (e) { 
+                document.getElementById('temp-out').innerText = "Err"; 
+            }
+        }
+
+        // Temperatura Interior (Sensor 34 da Hue)
+        async function getIndoorTemp() {
+            try {
+                const url = `http://192.168.1.183/api/ryqpfV2hzUw3ZkN-twiFBEMPUu-cN7CxHMFDaVSa/sensors/34`;
+                const response = await fetch(url);
+                const data = await response.json();
+                // A Hue devolve 2450 para 24.5ºC. Dividimos por 100 e arredondamos.
+                document.getElementById('temp-in').innerText = Math.round(data.state.temperature / 100);
+            } catch (e) { 
+                document.getElementById('temp-in').innerText = "Err"; 
+            }
+        }
+
+        setInterval(updateClock, 1000);
+        setInterval(getOutdoorTemp, 600000); // 10 min
+        setInterval(getIndoorTemp, 60000);   // 1 min
+        
+        updateClock();
+        getOutdoorTemp();
+        getIndoorTemp();
     </script>
 </body>
 </html>
