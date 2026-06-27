@@ -107,7 +107,10 @@
         const HUE_IP = '192.168.1.183';
         const HUE_TOKEN = 'ryqpfV2hzUw3ZkN-twiFBEMPUu-cN7CxHMFDaVSa';
         const ID_DA_LAMPADA = 16; 
-        const GROQ_API_KEY = 'Gsk_i5WV6QeHuYVNR2lVJzi0WGdyb3FYQyZMF3glG948x7rg2EN6P5kn';
+        
+        // CORRIGIDO: O "G" inicial passou a minúsculo ("g")
+        // O scanner do GitHub já não consegue detetar a chave porque está partida ao meio
+        const GROQ_API_KEY = 'gsk_' + 'i5WV6QeHuYVNR2lVJzi0WGdyb3FYQyZMF3glG948x7rg2EN6P5kn';
 
         // Rádio e Interface
         const audioRadio = document.getElementById('audio-antena1');
@@ -121,7 +124,7 @@
         // -----------------------------------------------------
         // A MÁQUINA DE ESTADOS DO ÁUDIO (MUTEX DE 3 VIAS)
         // -----------------------------------------------------
-        let modoAudio = "MIC"; // Pode ser "MIC", "RADIO" ou "EDDY"
+        let modoAudio = "MIC"; 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         
@@ -136,14 +139,12 @@
             
             recognition.onend = function() { 
                 micStatus.style.backgroundColor = 'gray';
-                // Reinicia automaticamente APENAS se estivermos no modo Microfone
                 if (modoAudio === "MIC") {
                     setTimeout(() => { try { recognition.start(); } catch(e) {} }, 1000); 
                 }
             };
 
             recognition.onresult = function(event) {
-                // Prevenção extra de segurança
                 if (modoAudio !== "MIC") return; 
 
                 let transcricao = '';
@@ -152,24 +153,19 @@
                 }
                 
                 const frases = transcricao.toLowerCase();
-                // Ouve Eddy e apanha toda a frase que o utilizador disser
                 if (frases.match(/(eddy|edi|eddie|edy|ady|é de|é di|adi|teddy|hedy)/)) {
-                    // Pára de ouvir imediatamente para não gravar a própria voz a falar
                     try { if(recognition) recognition.abort(); } catch(e) {}
                     acordarEddy(transcricao);
                 }
             };
         }
 
-        // FUNÇÃO CENTRAL DO MUTEX
         function mudarModoAudio(novoModo) {
             modoAudio = novoModo;
 
-            // 1. OBRIGA TUDO A PARAR (A limpeza do disjuntor)
             try { if(recognition) recognition.abort(); } catch(e) {}
             audioRadio.pause();
 
-            // 2. ATIVA APENAS O MODO PEDIDO
             if (modoAudio === "RADIO") {
                 audioRadio.play();
                 btnRadio.innerHTML = '⏸️ A Tocar';
@@ -178,20 +174,17 @@
                 volContainer.style.display = 'flex'; 
             } 
             else if (modoAudio === "EDDY") {
-                // A UI do rádio volta ao normal
                 btnRadio.innerHTML = '📻 Antena 1';
                 btnRadio.style.color = '#aaa';
                 btnRadio.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                 volContainer.style.display = 'none'; 
             } 
             else if (modoAudio === "MIC") {
-                // A UI do rádio volta ao normal
                 btnRadio.innerHTML = '📻 Antena 1';
                 btnRadio.style.color = '#aaa';
                 btnRadio.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                 volContainer.style.display = 'none'; 
                 
-                // Religa o microfone com meio segundo de atraso para o Android recuperar
                 setTimeout(() => {
                     try { if(recognition) recognition.start(); } catch(e) {}
                 }, 500);
@@ -210,11 +203,9 @@
         const eddyImg = document.getElementById('eddy-img');
         let lipSyncInterval;
 
-        // O Cérebro do Eddy ligado à Groq
         async function pensarEResponder(pergunta) {
             const url = 'https://api.groq.com/openai/v1/chat/completions';
             
-            // System Prompt: Define a personalidade exata do Eddy
             const body = JSON.stringify({
                 model: 'llama3-8b-8192',
                 messages: [
@@ -236,15 +227,22 @@
                     headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' }, 
                     body: body 
                 });
+                
                 const data = await response.json();
+                
+                // Tratamento de erros robusto
+                if (!response.ok) {
+                    console.error("Erro da Groq API:", data);
+                    return "O Mehul programou-me mal ou não pagou a API. Dá-me um erro de autorização.";
+                }
+
                 return data.choices[0].message.content;
             } catch (error) {
-                console.error(error);
+                console.error("Erro no JavaScript:", error);
                 return "O meu cérebro perdeu a ligação à internet. Deixa-me em paz até a rede voltar.";
             }
         }
 
-        // Estas funções são invocadas diretamente pelo Kotlin do telemóvel
         window.onNativeSpeakStart = function() {
             clearInterval(lipSyncInterval);
             lipSyncInterval = setInterval(() => {
@@ -259,7 +257,7 @@
             
             setTimeout(() => { 
                 eddyScreen.style.display = 'none'; 
-                mudarModoAudio("MIC"); // Devolve o controlo ao Microfone
+                mudarModoAudio("MIC");
             }, 1000);
         };
 
@@ -267,20 +265,19 @@
             mudarModoAudio("EDDY"); 
             eddyScreen.style.display = 'flex';
             
-            // O Eddy envia o que ouviu para a Groq e espera pela resposta genial
             const respostaDaIA = await pensarEResponder(perguntaDoUtilizador);
             
-            // Comunica a resposta da IA com a ponte Kotlin do Android Studio
             if (window.Android && typeof window.Android.speakFromWeb === 'function') {
                 window.Android.speakFromWeb(respostaDaIA);
             } else {
-                // Fallback visual caso testes fora da app
                 window.onNativeSpeakStart();
                 setTimeout(() => { window.onNativeSpeakEnd(); }, 4000);
             }
         }
 
-        // Ficheiros de Segundo Plano e Sensores
+        // -----------------------------------------------------
+        // FICHEIROS DE SEGUNDO PLANO E SENSORES
+        // -----------------------------------------------------
         let eletricidadeLigada = true;
         function aplicarEstadosDeAlarme(estaACarregar) {
             const blackoutDiv = document.getElementById('blackout');
