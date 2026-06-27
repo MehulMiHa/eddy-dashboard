@@ -101,9 +101,6 @@
     </div>
 
     <script>
-        // -----------------------------------------------------
-        // CONFIGURAÇÕES
-        // -----------------------------------------------------
         const HUE_IP = '192.168.1.183';
         const HUE_TOKEN = 'ryqpfV2hzUw3ZkN-twiFBEMPUu-cN7CxHMFDaVSa';
         const ID_DA_LAMPADA = 16; 
@@ -117,10 +114,8 @@
         audioRadio.volume = 0.5;
         volumeSlider.addEventListener('input', function() { audioRadio.volume = this.value; });
 
-        // -----------------------------------------------------
-        // A MÁQUINA DE ESTADOS DO ÁUDIO (MUTEX DE 3 VIAS)
-        // -----------------------------------------------------
-        let modoAudio = "MIC"; // Pode ser "MIC", "RADIO" ou "EDDY"
+        // Máquina de Estados
+        let modoAudio = "MIC"; 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         
@@ -135,14 +130,12 @@
             
             recognition.onend = function() { 
                 micStatus.style.backgroundColor = 'gray';
-                // Reinicia automaticamente APENAS se estivermos no modo Microfone
                 if (modoAudio === "MIC") {
                     setTimeout(() => { try { recognition.start(); } catch(e) {} }, 1000); 
                 }
             };
 
             recognition.onresult = function(event) {
-                // Prevenção extra de segurança
                 if (modoAudio !== "MIC") return; 
 
                 let transcricao = '';
@@ -151,23 +144,18 @@
                 }
                 
                 const frases = transcricao.toLowerCase();
-                // Ouve Eddy
                 if (frases.match(/(eddy|edi|eddie|edy|ady|é de|é di|adi|teddy|hedy)/)) {
                     acordarEddy();
                 }
             };
         }
 
-        // FUNÇÃO CENTRAL DO MUTEX
         function mudarModoAudio(novoModo) {
             modoAudio = novoModo;
 
-            // 1. OBRIGA TUDO A PARAR (A limpeza do disjuntor)
             try { if(recognition) recognition.abort(); } catch(e) {}
-            window.speechSynthesis.cancel();
             audioRadio.pause();
 
-            // 2. ATIVA APENAS O MODO PEDIDO
             if (modoAudio === "RADIO") {
                 audioRadio.play();
                 btnRadio.innerHTML = '⏸️ A Tocar';
@@ -176,20 +164,17 @@
                 volContainer.style.display = 'flex'; 
             } 
             else if (modoAudio === "EDDY") {
-                // A UI do rádio volta ao normal
                 btnRadio.innerHTML = '📻 Antena 1';
                 btnRadio.style.color = '#aaa';
                 btnRadio.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                 volContainer.style.display = 'none'; 
             } 
             else if (modoAudio === "MIC") {
-                // A UI do rádio volta ao normal
                 btnRadio.innerHTML = '📻 Antena 1';
                 btnRadio.style.color = '#aaa';
                 btnRadio.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                 volContainer.style.display = 'none'; 
                 
-                // Religa o microfone com meio segundo de atraso para o Android recuperar
                 setTimeout(() => {
                     try { if(recognition) recognition.start(); } catch(e) {}
                 }, 500);
@@ -197,79 +182,55 @@
         }
 
         function toggleRadio() {
-            if (modoAudio === "RADIO") {
-                mudarModoAudio("MIC"); // Desliga rádio, regressa ao microfone
-            } else {
-                mudarModoAudio("RADIO"); // Desliga microfone, liga rádio
-            }
+            if (modoAudio === "RADIO") { mudarModoAudio("MIC"); } 
+            else { mudarModoAudio("RADIO"); }
         }
 
         // -----------------------------------------------------
-        // EDDY AI: LÓGICA DE FALA NATIVA ESTABILIZADA
+        // REAÇÕES À PONTE NATIVA DE ÁUDIO DO ANDROID
         // -----------------------------------------------------
         const eddyScreen = document.getElementById('eddy-fullscreen');
         const eddyImg = document.getElementById('eddy-img');
-        
         let lipSyncInterval;
-        let globalUtterance; // Variável global obrigatória para o Android não a apagar da memória (Bug WebView)
-        let safetyTimer; // Temporizador de segurança
+
+        // Estas funções são invocadas diretamente pelo Kotlin do telemóvel
+        window.onNativeSpeakStart = function() {
+            clearInterval(lipSyncInterval);
+            lipSyncInterval = setInterval(() => {
+                const esticao = 1 + (Math.random() * 0.15);
+                eddyImg.style.transform = `scaleY(${esticao})`;
+            }, 60);
+        };
+
+        window.onNativeSpeakEnd = function() {
+            clearInterval(lipSyncInterval);
+            eddyImg.style.transform = 'scaleY(1)'; 
+            
+            setTimeout(() => { 
+                eddyScreen.style.display = 'none'; 
+                mudarModoAudio("MIC"); // Devolve o controlo ao Microfone
+            }, 1000);
+        };
 
         function acordarEddy() {
-            // Invoca o Mutex: corta rádio e corta microfone na mesma fração de segundo
             mudarModoAudio("EDDY"); 
             eddyScreen.style.display = 'flex';
             
-            // Dá 600 milissegundos para o hardware do Android trancar o microfone totalmente
             setTimeout(() => {
                 const resposta = "Sim, grande criador? Achas mesmo que eu não tenho mais nada para fazer senão ouvir-te?";
                 
-                globalUtterance = new SpeechSynthesisUtterance(resposta);
-                // NOTA: Não defino a linguagem (lang). Isto força o Android a usar o motor pré-definido e resolve conflitos.
-                globalUtterance.rate = 1.1; 
-
-                // TEMPORIZADOR DE SEGURANÇA: Se o motor de fala encravar ou der erro, o Eddy fecha passados 6 segundos.
-                safetyTimer = setTimeout(() => {
-                    clearInterval(lipSyncInterval);
-                    eddyImg.style.transform = 'scaleY(1)'; 
-                    eddyScreen.style.display = 'none'; 
-                    mudarModoAudio("MIC");
-                }, 6000);
-
-                globalUtterance.onstart = function() {
-                    lipSyncInterval = setInterval(() => {
-                        const esticao = 1 + (Math.random() * 0.15);
-                        eddyImg.style.transform = `scaleY(${esticao})`;
-                    }, 60);
-                };
-
-                globalUtterance.onend = function() {
-                    clearTimeout(safetyTimer); // A fala correu bem, desliga o alarme de segurança
-                    clearInterval(lipSyncInterval);
-                    eddyImg.style.transform = 'scaleY(1)'; 
-                    
-                    setTimeout(() => { 
-                        eddyScreen.style.display = 'none'; 
-                        // O Eddy acabou, devolve o controlo ao Microfone
-                        mudarModoAudio("MIC");
-                    }, 1000);
-                };
-
-                globalUtterance.onerror = function(event) {
-                    // Impede o fecho num segundo. A segurança de 6 segundos trata de o fechar.
-                    console.log("Erro no TTS do Android capturado:", event);
-                };
-
-                // Falar!
-                window.speechSynthesis.speak(globalUtterance);
+                // Comunica com a ponte Kotlin do Android Studio
+                if (window.Android && typeof window.Android.speakFromWeb === 'function') {
+                    window.Android.speakFromWeb(resposta);
+                } else {
+                    // Fallback visual caso testes fora da app
+                    window.onNativeSpeakStart();
+                    setTimeout(() => { window.onNativeSpeakEnd(); }, 4000);
+                }
             }, 600);
         }
 
-        // Tenta iniciar no modo Microfone ao abrir a app
-        setTimeout(() => { mudarModoAudio("MIC"); }, 1000);
-
-        // -----------------------------------------------------
-        // O RESTO DO TEU CÓDIGO (Background, Alarme e Meteorologia)
-        // -----------------------------------------------------
+        // Ficheiros de Segundo Plano e Sensores
         let eletricidadeLigada = true;
         function aplicarEstadosDeAlarme(estaACarregar) {
             const blackoutDiv = document.getElementById('blackout');
@@ -296,8 +257,8 @@
         function updateClockAndDate() {
             const agora = new Date();
             const horas = String(agora.getHours()).padStart(2, '0');
-            const minutos = String(agora.getMinutes()).padStart(2, '0');
-            document.getElementById('relogio').innerHTML = `${horas}<span class="pisca">:</span>${minutos}`;
+            const minutes = String(agora.getMinutes()).padStart(2, '0');
+            document.getElementById('relogio').innerHTML = `${horas}<span class="pisca">:</span>${minutes}`;
             const opcoesData = { weekday: 'long', day: 'numeric', month: 'long' };
             document.getElementById('data-atual').innerText = agora.toLocaleDateString('pt-PT', opcoesData);
         }
@@ -336,6 +297,7 @@
             document.body.style.transform = `translate(${eixoX}px, ${eixoY}px)`;
         }
 
+        // Inicialização
         setInterval(updateClockAndDate, 1000);
         setInterval(getOutdoorTemp, 600000); 
         setInterval(getRainChance, 600000);  
