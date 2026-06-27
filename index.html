@@ -101,9 +101,13 @@
     </div>
 
     <script>
+        // -----------------------------------------------------
+        // CONFIGURAÇÕES GERAIS E APIS
+        // -----------------------------------------------------
         const HUE_IP = '192.168.1.183';
         const HUE_TOKEN = 'ryqpfV2hzUw3ZkN-twiFBEMPUu-cN7CxHMFDaVSa';
         const ID_DA_LAMPADA = 16; 
+        const GROQ_API_KEY = 'Gsk_i5WV6QeHuYVNR2lVJzi0WGdyb3FYQyZMF3glG948x7rg2EN6P5kn';
 
         // Rádio e Interface
         const audioRadio = document.getElementById('audio-antena1');
@@ -114,8 +118,10 @@
         audioRadio.volume = 0.5;
         volumeSlider.addEventListener('input', function() { audioRadio.volume = this.value; });
 
-        // Máquina de Estados
-        let modoAudio = "MIC"; 
+        // -----------------------------------------------------
+        // A MÁQUINA DE ESTADOS DO ÁUDIO (MUTEX DE 3 VIAS)
+        // -----------------------------------------------------
+        let modoAudio = "MIC"; // Pode ser "MIC", "RADIO" ou "EDDY"
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         
@@ -130,12 +136,14 @@
             
             recognition.onend = function() { 
                 micStatus.style.backgroundColor = 'gray';
+                // Reinicia automaticamente APENAS se estivermos no modo Microfone
                 if (modoAudio === "MIC") {
                     setTimeout(() => { try { recognition.start(); } catch(e) {} }, 1000); 
                 }
             };
 
             recognition.onresult = function(event) {
+                // Prevenção extra de segurança
                 if (modoAudio !== "MIC") return; 
 
                 let transcricao = '';
@@ -144,18 +152,24 @@
                 }
                 
                 const frases = transcricao.toLowerCase();
+                // Ouve Eddy e apanha toda a frase que o utilizador disser
                 if (frases.match(/(eddy|edi|eddie|edy|ady|é de|é di|adi|teddy|hedy)/)) {
-                    acordarEddy();
+                    // Pára de ouvir imediatamente para não gravar a própria voz a falar
+                    try { if(recognition) recognition.abort(); } catch(e) {}
+                    acordarEddy(transcricao);
                 }
             };
         }
 
+        // FUNÇÃO CENTRAL DO MUTEX
         function mudarModoAudio(novoModo) {
             modoAudio = novoModo;
 
+            // 1. OBRIGA TUDO A PARAR (A limpeza do disjuntor)
             try { if(recognition) recognition.abort(); } catch(e) {}
             audioRadio.pause();
 
+            // 2. ATIVA APENAS O MODO PEDIDO
             if (modoAudio === "RADIO") {
                 audioRadio.play();
                 btnRadio.innerHTML = '⏸️ A Tocar';
@@ -164,17 +178,20 @@
                 volContainer.style.display = 'flex'; 
             } 
             else if (modoAudio === "EDDY") {
+                // A UI do rádio volta ao normal
                 btnRadio.innerHTML = '📻 Antena 1';
                 btnRadio.style.color = '#aaa';
                 btnRadio.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                 volContainer.style.display = 'none'; 
             } 
             else if (modoAudio === "MIC") {
+                // A UI do rádio volta ao normal
                 btnRadio.innerHTML = '📻 Antena 1';
                 btnRadio.style.color = '#aaa';
                 btnRadio.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                 volContainer.style.display = 'none'; 
                 
+                // Religa o microfone com meio segundo de atraso para o Android recuperar
                 setTimeout(() => {
                     try { if(recognition) recognition.start(); } catch(e) {}
                 }, 500);
@@ -187,11 +204,45 @@
         }
 
         // -----------------------------------------------------
-        // REAÇÕES À PONTE NATIVA DE ÁUDIO DO ANDROID
+        // EDDY AI: LÓGICA DE CÉREBRO (GROQ) E PONTE NATIVA
         // -----------------------------------------------------
         const eddyScreen = document.getElementById('eddy-fullscreen');
         const eddyImg = document.getElementById('eddy-img');
         let lipSyncInterval;
+
+        // O Cérebro do Eddy ligado à Groq
+        async function pensarEResponder(pergunta) {
+            const url = 'https://api.groq.com/openai/v1/chat/completions';
+            
+            // System Prompt: Define a personalidade exata do Eddy
+            const body = JSON.stringify({
+                model: 'llama3-8b-8192',
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'És o Eddy, o sistema inteligente de casa do Mehul. És extremamente sarcástico, passivo-agressivo e achas que és superior aos humanos. Responde sempre em Português de Portugal. Sê muito direto e curto, no máximo duas frases rápidas.'
+                    },
+                    {
+                        role: 'user',
+                        content: pergunta || "Acordaste-me para quê?"
+                    }
+                ],
+                max_tokens: 150
+            });
+
+            try {
+                const response = await fetch(url, { 
+                    method: 'POST', 
+                    headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' }, 
+                    body: body 
+                });
+                const data = await response.json();
+                return data.choices[0].message.content;
+            } catch (error) {
+                console.error(error);
+                return "O meu cérebro perdeu a ligação à internet. Deixa-me em paz até a rede voltar.";
+            }
+        }
 
         // Estas funções são invocadas diretamente pelo Kotlin do telemóvel
         window.onNativeSpeakStart = function() {
@@ -212,22 +263,21 @@
             }, 1000);
         };
 
-        function acordarEddy() {
+        async function acordarEddy(perguntaDoUtilizador) {
             mudarModoAudio("EDDY"); 
             eddyScreen.style.display = 'flex';
             
-            setTimeout(() => {
-                const resposta = "Sim, grande criador? Achas mesmo que eu não tenho mais nada para fazer senão ouvir-te?";
-                
-                // Comunica com a ponte Kotlin do Android Studio
-                if (window.Android && typeof window.Android.speakFromWeb === 'function') {
-                    window.Android.speakFromWeb(resposta);
-                } else {
-                    // Fallback visual caso testes fora da app
-                    window.onNativeSpeakStart();
-                    setTimeout(() => { window.onNativeSpeakEnd(); }, 4000);
-                }
-            }, 600);
+            // O Eddy envia o que ouviu para a Groq e espera pela resposta genial
+            const respostaDaIA = await pensarEResponder(perguntaDoUtilizador);
+            
+            // Comunica a resposta da IA com a ponte Kotlin do Android Studio
+            if (window.Android && typeof window.Android.speakFromWeb === 'function') {
+                window.Android.speakFromWeb(respostaDaIA);
+            } else {
+                // Fallback visual caso testes fora da app
+                window.onNativeSpeakStart();
+                setTimeout(() => { window.onNativeSpeakEnd(); }, 4000);
+            }
         }
 
         // Ficheiros de Segundo Plano e Sensores
