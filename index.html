@@ -43,49 +43,18 @@
         /* ------------------------------------- */
         #eddy-fullscreen {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: #fff; 
+            background-color: #fff; /* O fundo branco */
             z-index: 9999999; display: none; justify-content: center; align-items: center;
-        }
-        
-        #eddy-wrapper {
-            position: relative;
-            width: 85vh; /* AUMENTADO: O Eddy agora está muito maior */
-            height: 85vh;
+            overflow: hidden; /* Corta o que sair fora do ecrã */
         }
         
         #eddy-img {
-            width: 100%; height: 100%; object-fit: contain;
-        }
-
-        /* 
-           ATENÇÃO AQUI: 
-           Pintei o background de "red" (vermelho) para tu veres os quadrados.
-           Altera os valores de "top" e "left" até os quadrados vermelhos taparem
-           exatamente os olhos e o sorriso do teu Eddy.
-           Quando estiver perfeito, muda o "red" de volta para "#fff".
-        */
-        .mask { position: absolute; background-color: red; }
-
-        /* Pálpebras (Descem para piscar) */
-        #eyelid-left {
-            top: 25%; /* Muda isto se a caixa estiver muito acima/abaixo do olho esquerdo */
-            left: 36%; /* Muda isto se a caixa estiver muito à esquerda/direita */
-            width: 10%; height: 10%;
-            transform: translateY(-100%); transition: transform 0.1s;
-        }
-        #eyelid-right {
-            top: 25%; /* Muda isto para subir/descer a caixa do olho direito */
-            left: 49%; /* Muda isto para alinhar a caixa do olho direito */
-            width: 10%; height: 10%;
-            transform: translateY(-100%); transition: transform 0.1s;
-        }
-
-        /* Máscara da Boca */
-        #mouth-mask {
-            top: 45%; /* Muda isto para alinhar a caixa em cima do sorriso */
-            left: 40%; /* Muda isto para centrar a caixa no sorriso */
-            width: 20%; height: 10%;
-            transform: translateY(100%); transition: transform 0.05s;
+            height: 100vh; 
+            object-fit: cover;
+            /* O ZOOM MÁGICO: Estica a imagem para o branco desaparecer nas bordas */
+            transform: scale(2.8); 
+            transform-origin: center;
+            transition: transform 0.05s linear; /* Para a animação da fala */
         }
 
         /* Indicador de Microfone Ativo */
@@ -132,14 +101,8 @@
         </div>
     </div>
 
-    <!-- O ECRÃ DO EDDY COM A TUA IMAGEM -->
     <div id="eddy-fullscreen">
-        <div id="eddy-wrapper">
-            <img id="eddy-img" src="eddy.png" alt="Eddy">
-            <div id="eyelid-left" class="mask"></div>
-            <div id="eyelid-right" class="mask"></div>
-            <div id="mouth-mask" class="mask"></div>
-        </div>
+        <img id="eddy-img" src="eddy.png" alt="Eddy">
     </div>
 
     <script>
@@ -147,23 +110,11 @@
         const HUE_TOKEN = 'ryqpfV2hzUw3ZkN-twiFBEMPUu-cN7CxHMFDaVSa';
         const ID_DA_LAMPADA = 16; 
 
-        // DESBLOQUEIO DE VOZ OBRIGATÓRIO NO ANDROID
-        let vozDesbloqueada = false;
-        document.body.addEventListener('click', function() {
-            if (!vozDesbloqueada && window.speechSynthesis) {
-                // Ao tocares no ecrã pela 1ª vez, ele carrega o motor de voz silenciosamente
-                const utter = new SpeechSynthesisUtterance('');
-                window.speechSynthesis.speak(utter);
-                vozDesbloqueada = true;
-            }
-        });
-
         // Rádio e Volume
         const audioRadio = document.getElementById('audio-antena1');
         const btnRadio = document.getElementById('btn-radio');
         const volContainer = document.getElementById('volume-container');
         const volumeSlider = document.getElementById('volume-slider');
-        
         audioRadio.volume = 0.5;
 
         function toggleRadio() {
@@ -188,13 +139,9 @@
         function aplicarEstadosDeAlarme(estaACarregar) {
             const blackoutDiv = document.getElementById('blackout');
             const alarmOverlay = document.getElementById('alarm-overlay');
-            if (!eletricidadeLigada) {
-                blackoutDiv.style.display = 'block'; alarmOverlay.style.display = 'none';
-            } else if (eletricidadeLigada && !estaACarregar) {
-                blackoutDiv.style.display = 'none'; alarmOverlay.style.display = 'block';
-            } else {
-                blackoutDiv.style.display = 'none'; alarmOverlay.style.display = 'none';
-            }
+            if (!eletricidadeLigada) { blackoutDiv.style.display = 'block'; alarmOverlay.style.display = 'none'; } 
+            else if (eletricidadeLigada && !estaACarregar) { blackoutDiv.style.display = 'none'; alarmOverlay.style.display = 'block'; } 
+            else { blackoutDiv.style.display = 'none'; alarmOverlay.style.display = 'none'; }
         }
         async function monitorarHueBridge() {
             try {
@@ -211,7 +158,7 @@
             });
         }
 
-        // Relógio, Clima e Anti Burn-in
+        // Relógio e Clima
         function updateClockAndDate() {
             const agora = new Date();
             const horas = String(agora.getHours()).padStart(2, '0');
@@ -238,11 +185,8 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 let maxPop = 0;
-                for(let i = 0; i < 4; i++) {
-                    if(data.list[i] && data.list[i].pop > maxPop) maxPop = data.list[i].pop;
-                }
-                const chance = Math.round(maxPop * 100);
-                document.getElementById('chuva-hoje').innerText = `🌧️ Chuva hoje: ${chance}%`;
+                for(let i = 0; i < 4; i++) { if(data.list[i] && data.list[i].pop > maxPop) maxPop = data.list[i].pop; }
+                document.getElementById('chuva-hoje').innerText = `🌧️ Chuva hoje: ${Math.round(maxPop * 100)}%`;
             } catch (e) { document.getElementById('chuva-hoje').innerText = `🌧️ Chuva hoje: Err`; }
         }
         async function getIndoorTemp() {
@@ -259,10 +203,11 @@
         }
 
         // -----------------------------------------------------
-        // INTELIGÊNCIA ARTIFICIAL: OUVIDOS SUPER-SENSÍVEIS E BOCA DO EDDY
+        // EDDY AI: MICROFONE E ANIMAÇÃO
         // -----------------------------------------------------
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const micStatus = document.getElementById('mic-status');
+        let reconhecedorAtivo = false;
 
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
@@ -270,8 +215,13 @@
             recognition.interimResults = true; 
             recognition.lang = 'pt-PT';
 
-            recognition.onstart = function() { micStatus.style.backgroundColor = 'red'; };
+            recognition.onstart = function() { micStatus.style.backgroundColor = 'red'; reconhecedorAtivo = true; };
             recognition.onerror = function() { micStatus.style.backgroundColor = 'gray'; };
+            recognition.onend = function() { 
+                micStatus.style.backgroundColor = 'gray';
+                reconhecedorAtivo = false;
+                setTimeout(() => { recognition.start(); }, 1000); // Tenta reiniciar passado 1 segundo
+            };
 
             recognition.onresult = function(event) {
                 let transcricao = '';
@@ -280,63 +230,50 @@
                 }
                 
                 const frases = transcricao.toLowerCase();
+                // Ouve "Eddy" e cancela o reconhecimento para não se ouvir a ele próprio
                 if (frases.match(/(eddy|edi|eddie|edy|ady|é de|é di|adi|teddy|hedy)/)) {
+                    recognition.abort(); 
                     acordarEddy();
                 }
             };
-
-            recognition.onend = function() { 
-                micStatus.style.backgroundColor = 'gray';
-                recognition.start(); 
-            };
-            recognition.start();
+            
+            // Tenta arrancar o microfone
+            try { recognition.start(); } catch(e) {}
         }
 
-        let lipSyncInterval;
-        const bocaMascara = document.getElementById('mouth-mask');
-        const olhoEsq = document.getElementById('eyelid-left');
-        const olhoDir = document.getElementById('eyelid-right');
         const eddyScreen = document.getElementById('eddy-fullscreen');
-
-        // Piscar os olhos aleatoriamente quando o Eddy está no ecrã
-        setInterval(() => {
-            if(eddyScreen.style.display === 'flex') {
-                olhoEsq.style.transform = 'translateY(0)'; 
-                olhoDir.style.transform = 'translateY(0)';
-                setTimeout(() => {
-                    olhoEsq.style.transform = 'translateY(-100%)'; 
-                    olhoDir.style.transform = 'translateY(-100%)';
-                }, 150);
-            }
-        }, 4000);
+        const eddyImg = document.getElementById('eddy-img');
+        let lipSyncInterval;
 
         function acordarEddy() {
             eddyScreen.style.display = 'flex';
             
-            const resposta = "Sim, grande criador? Achas mesmo que eu não tenho mais nada para fazer senão ouvir-te?";
+            const resposta = "Sim? Mais uma tarefa inútil para o teu assistente superior fazer?";
             const synth = window.speechSynthesis;
             const utterThis = new SpeechSynthesisUtterance(resposta);
             utterThis.lang = 'pt-PT';
             utterThis.rate = 1.1; 
 
             utterThis.onstart = function() {
-                // LIP-SYNC COM A MÁSCARA 
+                // LIP-SYNC EFEITO HOLOGRÁFICO (Sem coordenadas, distorce o Y da imagem)
                 lipSyncInterval = setInterval(() => {
-                    const tapar = Math.random() * 100; 
-                    bocaMascara.style.transform = `translateY(${tapar}%)`;
+                    // Mantém o scale(2.8) para o zoom, e adiciona um scaleY aleatório entre 1.0 e 1.15
+                    const esticão = 1 + (Math.random() * 0.15);
+                    eddyImg.style.transform = `scale(2.8) scaleY(${esticão})`;
                 }, 60);
             };
 
             utterThis.onend = function() {
                 clearInterval(lipSyncInterval);
-                bocaMascara.style.transform = 'translateY(100%)'; 
+                eddyImg.style.transform = 'scale(2.8)'; // Volta ao tamanho normal
                 setTimeout(() => { eddyScreen.style.display = 'none'; }, 2000);
             };
 
+            // Falar!
             synth.speak(utterThis);
         }
 
-        // Iniciar tudo
+        // Iniciar loops
         setInterval(updateClockAndDate, 1000);
         setInterval(getOutdoorTemp, 600000); 
         setInterval(getRainChance, 600000);  
@@ -344,11 +281,7 @@
         setInterval(aplicarAntiBurnIn, 600000); 
         setInterval(monitorarHueBridge, 5000); 
         
-        updateClockAndDate();
-        getOutdoorTemp();
-        getRainChance();
-        getIndoorTemp();
-        monitorarHueBridge(); 
+        updateClockAndDate(); getOutdoorTemp(); getRainChance(); getIndoorTemp(); monitorarHueBridge(); 
     </script>
 </body>
 </html>
