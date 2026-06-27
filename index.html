@@ -38,26 +38,20 @@
         .out-temp-row { display: flex; align-items: center; justify-content: center; }
         #weather-icon { width: 15vh; height: 15vh; display: none; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
 
-        /* ------------------------------------- */
-        /* MODO EDDY COM IMAGEM ORIGINAL         */
-        /* ------------------------------------- */
+        /* MODO EDDY */
         #eddy-fullscreen {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: #fff; /* O fundo branco */
-            z-index: 9999999; display: none; justify-content: center; align-items: center;
-            overflow: hidden; /* Corta o que sair fora do ecrã */
+            background-color: #fff; z-index: 9999999; display: none; justify-content: center; align-items: center;
         }
         
         #eddy-img {
-            height: 100vh; 
-            object-fit: cover;
-            /* O ZOOM MÁGICO: Estica a imagem para o branco desaparecer nas bordas */
-            transform: scale(2.8); 
+            height: 70vh; /* Tamanho normalizado, não corta a imagem */
+            max-width: 90vw;
+            object-fit: contain;
             transform-origin: center;
-            transition: transform 0.05s linear; /* Para a animação da fala */
+            transition: transform 0.05s linear;
         }
 
-        /* Indicador de Microfone Ativo */
         #mic-status {
             position: fixed; bottom: 2vh; right: 2vw; width: 1.5vh; height: 1.5vh; 
             background-color: red; border-radius: 50%; opacity: 0.5; z-index: 9999;
@@ -203,11 +197,11 @@
         }
 
         // -----------------------------------------------------
-        // EDDY AI: MICROFONE E ANIMAÇÃO
+        // EDDY AI: LÓGICA DE ÁUDIO CORRIGIDA (SEMÁFORO)
         // -----------------------------------------------------
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const micStatus = document.getElementById('mic-status');
-        let reconhecedorAtivo = false;
+        let eddyA_Falar = false; // O nosso semáforo
 
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
@@ -215,29 +209,35 @@
             recognition.interimResults = true; 
             recognition.lang = 'pt-PT';
 
-            recognition.onstart = function() { micStatus.style.backgroundColor = 'red'; reconhecedorAtivo = true; };
+            recognition.onstart = function() { micStatus.style.backgroundColor = 'red'; };
             recognition.onerror = function() { micStatus.style.backgroundColor = 'gray'; };
+            
             recognition.onend = function() { 
                 micStatus.style.backgroundColor = 'gray';
-                reconhecedorAtivo = false;
-                setTimeout(() => { recognition.start(); }, 1000); // Tenta reiniciar passado 1 segundo
+                // Só volta a ligar o mic se o Eddy NÃO estiver a falar
+                if (!eddyA_Falar) {
+                    setTimeout(() => { 
+                        try { recognition.start(); } catch(e) {} 
+                    }, 1000); 
+                }
             };
 
             recognition.onresult = function(event) {
+                if (eddyA_Falar) return; // Se está a falar, ignora ruídos
+
                 let transcricao = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     transcricao += event.results[i][0].transcript;
                 }
                 
                 const frases = transcricao.toLowerCase();
-                // Ouve "Eddy" e cancela o reconhecimento para não se ouvir a ele próprio
+                // Ouve "Eddy"
                 if (frases.match(/(eddy|edi|eddie|edy|ady|é de|é di|adi|teddy|hedy)/)) {
-                    recognition.abort(); 
+                    try { recognition.abort(); } catch(e) {} // PÁRA DE OUVIR IMEDIATAMENTE
                     acordarEddy();
                 }
             };
             
-            // Tenta arrancar o microfone
             try { recognition.start(); } catch(e) {}
         }
 
@@ -246,32 +246,60 @@
         let lipSyncInterval;
 
         function acordarEddy() {
+            eddyA_Falar = true; // Tranca o semáforo
             eddyScreen.style.display = 'flex';
             
-            const resposta = "Sim? Mais uma tarefa inútil para o teu assistente superior fazer?";
+            const resposta = "Sim, grande criador? Achas mesmo que eu não tenho mais nada para fazer senão ouvir-te?";
             const synth = window.speechSynthesis;
+            
+            // Cancela falas pendentes
+            synth.cancel();
+
             const utterThis = new SpeechSynthesisUtterance(resposta);
             utterThis.lang = 'pt-PT';
             utterThis.rate = 1.1; 
 
             utterThis.onstart = function() {
-                // LIP-SYNC EFEITO HOLOGRÁFICO (Sem coordenadas, distorce o Y da imagem)
+                // Rádio baixa volume enquanto fala (se estiver a dar)
+                if(!audioRadio.paused) audioRadio.volume = 0.1;
+                
+                // LIP-SYNC
                 lipSyncInterval = setInterval(() => {
-                    // Mantém o scale(2.8) para o zoom, e adiciona um scaleY aleatório entre 1.0 e 1.15
+                    // Sem scale base gigante, apenas estica ligeiramente na vertical (1.0 a 1.15)
                     const esticão = 1 + (Math.random() * 0.15);
-                    eddyImg.style.transform = `scale(2.8) scaleY(${esticão})`;
+                    eddyImg.style.transform = `scaleY(${esticão})`;
                 }, 60);
             };
 
             utterThis.onend = function() {
                 clearInterval(lipSyncInterval);
-                eddyImg.style.transform = 'scale(2.8)'; // Volta ao tamanho normal
-                setTimeout(() => { eddyScreen.style.display = 'none'; }, 2000);
+                eddyImg.style.transform = 'scaleY(1)'; // Volta ao normal
+                if(!audioRadio.paused) audioRadio.volume = volumeSlider.value; // Rádio volta ao normal
+                
+                setTimeout(() => { 
+                    eddyScreen.style.display = 'none'; 
+                    eddyA_Falar = false; // Destranca o semáforo
+                    
+                    // Pede ao mic para voltar a escutar
+                    if (SpeechRecognition) {
+                        try { 
+                            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                            recognition.start(); 
+                        } catch(e) {}
+                    }
+                }, 2000);
             };
 
             // Falar!
             synth.speak(utterThis);
         }
+
+        // Desbloqueio de voz manual (Toca no ecrã preto uma vez só para garantir)
+        document.body.addEventListener('click', function() {
+            const synth = window.speechSynthesis;
+            const utter = new SpeechSynthesisUtterance('');
+            synth.speak(utter);
+        }, { once: true });
 
         // Iniciar loops
         setInterval(updateClockAndDate, 1000);
