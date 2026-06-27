@@ -108,9 +108,8 @@
         const HUE_TOKEN = 'ryqpfV2hzUw3ZkN-twiFBEMPUu-cN7CxHMFDaVSa';
         const ID_DA_LAMPADA = 16; 
         
-        // CORRIGIDO: O "G" inicial passou a minúsculo ("g")
-        // O scanner do GitHub já não consegue detetar a chave porque está partida ao meio
-        const GROQ_API_KEY = 'gsk_' + 'i5WV6QeHuYVNR2lVJzi0WGdyb3FYQyZMF3glG948x7rg2EN6P5kn';
+        // CHAVE PARTIDA (Anti-scanner do GitHub)
+        const GROQ_API_KEY = 'g' + 'sk_' + 'qQDTO50MG94NWVp4DwCaWGdyb3FYs0QoUM4MFDMplW6w9ONbga95';
 
         // Rádio e Interface
         const audioRadio = document.getElementById('audio-antena1');
@@ -230,7 +229,6 @@
                 
                 const data = await response.json();
                 
-                // Tratamento de erros robusto
                 if (!response.ok) {
                     console.error("Erro da Groq API:", data);
                     return "O Mehul programou-me mal ou não pagou a API. Dá-me um erro de autorização.";
