@@ -45,13 +45,14 @@
         }
         
         #eddy-img {
-            height: 70vh; /* Tamanho normalizado, não corta a imagem */
+            height: 70vh; 
             max-width: 90vw;
             object-fit: contain;
             transform-origin: center;
             transition: transform 0.05s linear;
         }
 
+        /* Indicador de Microfone */
         #mic-status {
             position: fixed; bottom: 2vh; right: 2vw; width: 1.5vh; height: 1.5vh; 
             background-color: red; border-radius: 50%; opacity: 0.5; z-index: 9999;
@@ -104,6 +105,10 @@
         const HUE_TOKEN = 'ryqpfV2hzUw3ZkN-twiFBEMPUu-cN7CxHMFDaVSa';
         const ID_DA_LAMPADA = 16; 
 
+        // VARIÁVEIS DE CONTROLO DE ÁUDIO (O Semáforo)
+        let radioLigado = false;
+        let eddyAFalar = false;
+
         // Rádio e Volume
         const audioRadio = document.getElementById('audio-antena1');
         const btnRadio = document.getElementById('btn-radio');
@@ -114,12 +119,26 @@
         function toggleRadio() {
             if (audioRadio.paused) {
                 audioRadio.play();
+                radioLigado = true;
+                
+                // DESLIGA MICROFONE IMEDIATAMENTE
+                if(recognition) {
+                    try { recognition.abort(); } catch(e){}
+                }
+
                 btnRadio.innerHTML = '⏸️ A Tocar';
                 btnRadio.style.color = '#ff9f43';
                 btnRadio.style.borderColor = '#ff9f43';
                 volContainer.style.display = 'flex'; 
             } else {
                 audioRadio.pause();
+                radioLigado = false;
+                
+                // VOLTA A LIGAR O MICROFONE
+                if(recognition && !eddyAFalar) {
+                    try { recognition.start(); } catch(e){}
+                }
+
                 btnRadio.innerHTML = '📻 Antena 1';
                 btnRadio.style.color = '#aaa';
                 btnRadio.style.borderColor = 'rgba(255, 255, 255, 0.2)';
@@ -197,33 +216,32 @@
         }
 
         // -----------------------------------------------------
-        // EDDY AI: LÓGICA DE ÁUDIO CORRIGIDA (SEMÁFORO)
+        // EDDY AI: MICROFONE E VOZ PERFEITAMENTE SEPARADOS
         // -----------------------------------------------------
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const micStatus = document.getElementById('mic-status');
-        let eddyA_Falar = false; // O nosso semáforo
+        let recognition;
 
         if (SpeechRecognition) {
-            const recognition = new SpeechRecognition();
+            recognition = new SpeechRecognition();
             recognition.continuous = true; 
             recognition.interimResults = true; 
             recognition.lang = 'pt-PT';
 
             recognition.onstart = function() { micStatus.style.backgroundColor = 'red'; };
-            recognition.onerror = function() { micStatus.style.backgroundColor = 'gray'; };
             
             recognition.onend = function() { 
                 micStatus.style.backgroundColor = 'gray';
-                // Só volta a ligar o mic se o Eddy NÃO estiver a falar
-                if (!eddyA_Falar) {
-                    setTimeout(() => { 
-                        try { recognition.start(); } catch(e) {} 
-                    }, 1000); 
+                // Só reinicia o microfone se a RÁDIO estiver desligada E o Eddy NÃO estiver a falar
+                if (!radioLigado && !eddyAFalar) {
+                    setTimeout(() => { try { recognition.start(); } catch(e) {} }, 1000); 
                 }
             };
 
+            recognition.onerror = function() { micStatus.style.backgroundColor = 'gray'; };
+
             recognition.onresult = function(event) {
-                if (eddyA_Falar) return; // Se está a falar, ignora ruídos
+                if (eddyAFalar || radioLigado) return; // Segurança dupla
 
                 let transcricao = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -233,12 +251,12 @@
                 const frases = transcricao.toLowerCase();
                 // Ouve "Eddy"
                 if (frases.match(/(eddy|edi|eddie|edy|ady|é de|é di|adi|teddy|hedy)/)) {
-                    try { recognition.abort(); } catch(e) {} // PÁRA DE OUVIR IMEDIATAMENTE
                     acordarEddy();
                 }
             };
             
-            try { recognition.start(); } catch(e) {}
+            // Inicia o microfone se a rádio não estiver ligada ao abrir
+            if(!radioLigado) { try { recognition.start(); } catch(e) {} }
         }
 
         const eddyScreen = document.getElementById('eddy-fullscreen');
@@ -246,55 +264,56 @@
         let lipSyncInterval;
 
         function acordarEddy() {
-            eddyA_Falar = true; // Tranca o semáforo
+            eddyAFalar = true; // Tranca o sistema
+            
+            // 1. DESLIGA O MICROFONE IMEDIATAMENTE (Obrigatório para o Android deixar falar)
+            if(recognition) {
+                try { recognition.abort(); } catch(e) {}
+            }
+
             eddyScreen.style.display = 'flex';
             
-            const resposta = "Sim, grande criador? Achas mesmo que eu não tenho mais nada para fazer senão ouvir-te?";
-            const synth = window.speechSynthesis;
-            
-            // Cancela falas pendentes
-            synth.cancel();
-
-            const utterThis = new SpeechSynthesisUtterance(resposta);
-            utterThis.lang = 'pt-PT';
-            utterThis.rate = 1.1; 
-
-            utterThis.onstart = function() {
-                // Rádio baixa volume enquanto fala (se estiver a dar)
-                if(!audioRadio.paused) audioRadio.volume = 0.1;
+            // 2. Espera 300ms para o Android limpar o canal de áudio antes de começar a falar
+            setTimeout(() => {
+                const resposta = "Sim, grande criador? Achas mesmo que eu não tenho mais nada para fazer senão ouvir-te?";
+                const synth = window.speechSynthesis;
                 
-                // LIP-SYNC
-                lipSyncInterval = setInterval(() => {
-                    // Sem scale base gigante, apenas estica ligeiramente na vertical (1.0 a 1.15)
-                    const esticão = 1 + (Math.random() * 0.15);
-                    eddyImg.style.transform = `scaleY(${esticão})`;
-                }, 60);
-            };
+                synth.cancel(); // Limpa bloqueios anteriores
 
-            utterThis.onend = function() {
-                clearInterval(lipSyncInterval);
-                eddyImg.style.transform = 'scaleY(1)'; // Volta ao normal
-                if(!audioRadio.paused) audioRadio.volume = volumeSlider.value; // Rádio volta ao normal
-                
-                setTimeout(() => { 
-                    eddyScreen.style.display = 'none'; 
-                    eddyA_Falar = false; // Destranca o semáforo
+                const utterThis = new SpeechSynthesisUtterance(resposta);
+                utterThis.lang = 'pt-PT';
+                utterThis.rate = 1.1; 
+
+                utterThis.onstart = function() {
+                    // LIP-SYNC
+                    lipSyncInterval = setInterval(() => {
+                        const esticão = 1 + (Math.random() * 0.15);
+                        eddyImg.style.transform = `scaleY(${esticão})`;
+                    }, 60);
+                };
+
+                utterThis.onend = function() {
+                    clearInterval(lipSyncInterval);
+                    eddyImg.style.transform = 'scaleY(1)'; // Volta ao normal
                     
-                    // Pede ao mic para voltar a escutar
-                    if (SpeechRecognition) {
-                        try { 
-                            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-                            recognition.start(); 
-                        } catch(e) {}
-                    }
-                }, 2000);
-            };
+                    setTimeout(() => { 
+                        eddyScreen.style.display = 'none'; 
+                        eddyAFalar = false; // Destranca o sistema
+                        
+                        // LIGA O MICROFONE NOVAMENTE (Só se a rádio não estiver a tocar)
+                        if (!radioLigado && recognition) {
+                            try { recognition.start(); } catch(e) {}
+                        }
+                    }, 2000);
+                };
 
-            // Falar!
-            synth.speak(utterThis);
+                // Falar!
+                synth.speak(utterThis);
+            }, 300);
         }
 
-        // Desbloqueio de voz manual (Toca no ecrã preto uma vez só para garantir)
+        // Tenta tocar no ecrã preto assim que a app abrir pela 1ª vez.
+        // Isto garante a 100% que o motor de voz (TTS) do Android desperta.
         document.body.addEventListener('click', function() {
             const synth = window.speechSynthesis;
             const utter = new SpeechSynthesisUtterance('');
